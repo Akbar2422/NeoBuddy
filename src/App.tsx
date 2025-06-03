@@ -728,7 +728,7 @@ function App() {
     const finalPrice = discountedPrices[room.id] || room.price_inr;
     
     const options = {
-      key: 'rzp_test_NqtAZlrjwRMC6Y',
+      key: process.env.RAZORPAY_KEY_ID || 'rzp_live_vq30QPPdcOI48N',
       amount: finalPrice * 100, // Amount in paise
       currency: 'INR',
       name: 'NeoBuddy',
