@@ -1116,20 +1116,62 @@ function App() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 relative z-10 mt-auto">
-        <div className="container">
-          <div className="text-center py-6 bg-transparent">
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="text-gray-300"
-            >
-              © {new Date().getFullYear()} <span className="gradient-text font-bold">NeoBuddy</span> | AI Face Replacement Technology
-            </motion.p>
-          </div>
+      <footer className="py-8 relative z-10 mt-auto bg-gradient-to-t from-gray-900 to-transparent border-t border-gray-800/30">
+      <div className="container max-w-6xl mx-auto px-4">
+        <div className="text-center py-6 backdrop-blur-sm bg-gray-900/20 rounded-lg shadow-lg">
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="text-gray-300 text-sm md:text-base mb-6"
+          >
+            © {new Date().getFullYear()} <span className="gradient-text font-bold">NeoBuddy</span> | <span className="text-purple-400">AI Face Replacement Technology</span>
+          </motion.p>
+          
+          {/* Horizontal layout for desktop, vertical for mobile */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex flex-col md:flex-row justify-center items-center gap-3 md:gap-1 mt-6"
+          >
+            <a href="/" className="text-gray-400 hover:text-white px-4 py-3 rounded-lg hover:bg-gray-800/50 transition-all duration-300 text-sm md:text-base border border-transparent hover:border-gray-700/50 w-full md:w-auto text-center">
+              Home
+            </a>
+            <span className="text-gray-600 mx-2 hidden md:inline">•</span>
+            
+            <a href="/privacy-policy" className="text-gray-400 hover:text-white px-4 py-3 rounded-lg hover:bg-gray-800/50 transition-all duration-300 text-sm md:text-base border border-transparent hover:border-gray-700/50 w-full md:w-auto text-center">
+              Privacy Policy
+            </a>
+            <span className="text-gray-600 mx-2 hidden md:inline">•</span>
+            
+            <a href="/terms-and-conditions" className="text-gray-400 hover:text-white px-4 py-3 rounded-lg hover:bg-gray-800/50 transition-all duration-300 text-sm md:text-base border border-transparent hover:border-gray-700/50 w-full md:w-auto text-center">
+              Terms & Conditions
+            </a>
+            <span className="text-gray-600 mx-2 hidden md:inline">•</span>
+            
+            <a href="/cancellation-refund" className="text-gray-400 hover:text-white px-4 py-3 rounded-lg hover:bg-gray-800/50 transition-all duration-300 text-sm md:text-base border border-transparent hover:border-gray-700/50 w-full md:w-auto text-center">
+              Cancellation & Refund
+            </a>
+            <span className="text-gray-600 mx-2 hidden md:inline">•</span>
+            
+            <a href="/contact-us" className="text-gray-400 hover:text-white px-4 py-3 rounded-lg hover:bg-gray-800/50 transition-all duration-300 text-sm md:text-base border border-transparent hover:border-gray-700/50 w-full md:w-auto text-center">
+              Contact Us
+            </a>
+          </motion.div>
         </div>
-      </footer>
+      </div>
+      
+      {/* Add gradient text styles */}
+      <style jsx>{`
+        .gradient-text {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+      `}</style>
+    </footer>
     </div>
   );
 }
