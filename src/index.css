@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #4F46E5;
+  --secondary: #10B981;
+}
+
+/* Custom styles */
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  scroll-behavior: smooth;
+}
+
+@layer components {
+  .container {
+    @apply px-4 mx-auto max-w-7xl;
+  }
+  
+  .btn {
+    @apply px-6 py-2 font-medium transition-all rounded-lg;
+  }
+  
+  .btn-primary {
+    @apply text-white bg-primary hover:bg-indigo-600;
+  }
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}

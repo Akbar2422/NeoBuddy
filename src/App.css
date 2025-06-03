@@ -1,0 +1,86 @@
+/* Custom styles for NeoBuddy Landing Page */
+
+/* Reset root styles */
+#root {
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0;
+  text-align: center;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Card animations */
+.room-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.room-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Custom button styles */
+.btn {
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cta-button {
+  background: linear-gradient(90deg, #9333ea 0%, #ec4899 100%);
+  color: white;
+  font-weight: 600;
+  padding: 12px 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(236, 72, 153, 0.3);
+}
+
+/* Gradient text */
+.text-transparent.bg-clip-text.bg-gradient-to-r.from-primary.to-secondary {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, var(--primary), var(--secondary));
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Container styles */
+.container {
+  width: 100%;
+  padding-right: 1rem;
+  padding-left: 1rem;
+  margin-right: auto;
+  margin-left: auto;
+  max-width: 1280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+

@@ -1,0 +1,19 @@
+/* Footer positioning styles */
+
+/* Make the main container a flex container with column direction */
+.min-h-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Ensure it takes at least the full viewport height */
+}
+
+/* Push the footer to the bottom by making the content grow */
+#rooms {
+  flex: 1;
+}
+
+/* Ensure the footer stays at the bottom */
+footer {
+  margin-top: auto;
+  width: 100%;
+}

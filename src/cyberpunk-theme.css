@@ -1,0 +1,246 @@
+/* Cyberpunk Theme for NeoBuddy Face Replacement Landing Page */
+
+:root {
+  --primary: #4F46E5; /* Indigo-600 */
+  --secondary: #10B981; /* Emerald-500 */
+  --purple-400: #A855F7;
+  --pink-400: #F472B6;
+  --cyan-400: #22D3EE;
+  --slate-950: #020617;
+  --purple-950: #581C87;
+}
+
+/* Dark cyberpunk background */
+body {
+  background: linear-gradient(to bottom, var(--slate-950), var(--purple-950), var(--slate-950));
+  color: white;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Animated background orbs */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.3;
+  z-index: 0;
+}
+
+.orb-purple {
+  width: 384px;
+  height: 384px;
+  background: radial-gradient(circle, var(--purple-400), var(--pink-400));
+  top: 10%;
+  left: 10%;
+  animation: floatPurple 20s infinite ease-in-out;
+}
+
+.orb-blue {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, var(--primary), var(--cyan-400));
+  bottom: 15%;
+  right: 60%;
+  animation: floatBlue 25s infinite ease-in-out;
+}
+
+.orb-emerald {
+  width: 256px;
+  height: 256px;
+  background: radial-gradient(circle, var(--secondary), var(--cyan-400));
+  bottom: 20%;
+  left: 20%;
+  animation: floatEmerald 15s ease-in-out infinite;
+}
+
+@keyframes floatPurple {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(100px, -100px) scale(1.2); }
+}
+
+@keyframes floatBlue {
+  0%, 100% { transform: translate(0, 0) scale(1.2); }
+  50% { transform: translate(-150px, 100px) scale(1); }
+}
+
+@keyframes floatEmerald {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(80px, -80px); }
+}
+
+/* Particle system */
+.particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: linear-gradient(to right, var(--purple-400), var(--pink-400));
+  opacity: 0.3;
+  z-index: 0;
+  animation: floatParticle 3s infinite ease-in-out;
+}
+
+@keyframes floatParticle {
+  0%, 100% { transform: translate(0, 0); opacity: 0.3; }
+  50% { transform: translate(0, -20px); opacity: 0.7; }
+}
+
+/* Glassmorphism cards */
+.glass-card {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 32px;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.25);
+  border: 1px solid rgba(164, 144, 255, 0.3);
+}
+
+/* Badge component */
+.badge {
+  background: linear-gradient(to right, rgba(79, 70, 229, 0.2), rgba(236, 72, 153, 0.2));
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(79, 70, 229, 0.3);
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  color: #d4c7ff;
+  display: inline-block;
+  animation: scaleIn 0.5s ease-out;
+}
+
+@keyframes scaleIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(to right, var(--purple-400), var(--pink-400), var(--cyan-400));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradientShift 3s infinite linear;
+  background-size: 200% auto;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* CTA Button */
+.cta-button {
+  background: linear-gradient(to right, var(--primary), var(--pink-400));
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.cta-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.5);
+}
+
+.cta-button:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.cta-button .arrow {
+  display: inline-block;
+  transition: transform 0.3s ease;
+  animation: arrowMove 1.5s infinite ease-in-out;
+}
+
+@keyframes arrowMove {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(3px); }
+}
+
+/* Status badges */
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.3s ease;
+}
+
+.status-badge.active {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-badge.inactive {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-badge:hover {
+  transform: scale(1.05);
+}
+
+/* Price display */
+.price-display {
+  font-size: 1.875rem;
+  font-weight: 900;
+  background: linear-gradient(to right, var(--purple-400), var(--pink-400));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transition: all 0.3s ease;
+}
+
+.price-display:hover {
+  transform: scale(1.1);
+}
+
+.price-suffix {
+  font-size: 0.875rem;
+  color: #9CA3AF;
+  font-weight: 400;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .orb-purple {
+    width: 250px;
+    height: 250px;
+  }
+  
+  .orb-blue {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .orb-emerald {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .glass-card {
+    padding: 24px;
+  }
+}

@@ -1,0 +1,57 @@
+.promo-code-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.promo-code-input-group {
+  margin-bottom: 1rem;
+}
+
+.promo-code-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem 0 0 0.375rem;
+  font-size: 0.875rem;
+  width: 100%;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+}
+
+.promo-code-input:focus {
+  border-color: rgba(139, 92, 246, 0.8);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+}
+
+.apply-promo-button {
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  color: white;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0 0.375rem 0.375rem 0;
+  font-size: 0.875rem;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5rem;
+}
+
+.apply-promo-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.apply-promo-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.original-price {
+  text-decoration: line-through;
+  opacity: 0.6;
+  font-size: 0.875rem;
+  margin-right: 0.5rem;
+}

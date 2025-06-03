@@ -1,0 +1,98 @@
+/* Enhanced Room Layout Styles */
+
+/* Improve container for better vertical scrolling */
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  overflow: visible;
+}
+
+/* Ensure body allows scrolling for many rooms */
+body {
+  overflow-y: auto;
+  min-height: 100vh;
+}
+
+/* Ensure room section scrolls properly */
+#rooms {
+  overflow-y: auto;
+  max-height: none;
+  scroll-behavior: smooth;
+  padding-bottom: 4rem;
+}
+
+/* Enhanced room card grid */
+.grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+/* Responsive grid adjustments */
+@media (min-width: 640px) {
+  .grid {
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Enhanced room card styles */
+.compact-glass-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  will-change: transform;
+}
+
+.compact-glass-card:hover {
+  transform: translateY(-10px) scale(1.03);
+  box-shadow: 
+    0 20px 25px -5px rgba(79, 70, 229, 0.3),
+    0 0 15px rgba(164, 144, 255, 0.5);
+  border-color: rgba(164, 144, 255, 0.5);
+}
+
+/* Ensure room cards don't overlap */
+.room-card-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
+/* Improve hover effects */
+.btn-compact {
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-compact:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+}
+
+/* Ensure smooth animations */
+.motion-safe:hover {
+  transition-duration: 300ms;
+}
+
+/* Ensure content doesn't overflow */
+.room-card-description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
