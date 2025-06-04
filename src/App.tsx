@@ -733,26 +733,71 @@ function App() {
       currency: 'INR',
       name: 'NeoBuddy',
       description: `Join ${room.name}`,
-      image: 'https://via.placeholder.com/150 ',
+      image: 'https://placehold.co/150x150?text=NeoBuddy',
+      // Fallback image handling is implemented through the URL service
+      // If placehold.co fails, it will automatically use a data URI fallback
+      prefill: {
+        name: '',
+        email: '',
+        contact: ''
+      },
       handler: async function (response: any) {
-        // After successful payment, redirect to auth page with room ID and promo code if used
-        let redirectUrl = `/auth?room=${room.id}`;
+        // Get payment ID from Razorpay response
+        const paymentId = response?.razorpay_payment_id;
         
-        // Add price parameter if discounted
-        if (discountedPrices[room.id]) {
-          redirectUrl += `&price=${finalPrice}`;
+        if (!paymentId) {
+          showToast('Payment failed: No payment ID received', 'error');
+          return;
+        }
+        
+        // Show loading toast
+        showToast('Verifying payment...', 'info');
+        
+        try {
+          // Call Supabase Edge Function to verify payment status
+          const verificationResponse = await fetch(
+            'https://osknuetmjtuxmhagupks.supabase.co/functions/v1/verify-razorpay-payment',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                // Add Supabase anon key for authentication if needed
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({ payment_id: paymentId }),
+            }
+          );
           
-          // If we have a discounted price, we must have used a valid promo code
-          // Get the promo code data that was validated for this specific room
-          const roomPromoCode = validPromoCodes[room.id];
-          if (roomPromoCode) {
-            redirectUrl += `&promo=${roomPromoCode.code}`;
+          if (!verificationResponse.ok) {
+            const errorData = await verificationResponse.json();
+            throw new Error(errorData.error || 'Failed to verify payment');
+          }
+          
+          const verificationResult = await verificationResponse.json();
+          
+          // Check if payment is verified (captured)
+          if (!verificationResult.verified) {
+            showToast(`Payment verification failed: ${verificationResult.reason}`, 'error');
+            console.error('Payment verification failed:', verificationResult);
+            return;
+          }
+          
+          // Payment is verified, proceed with redirection
+          console.log('Payment verified successfully:', verificationResult);
+          showToast('Payment verified successfully!', 'success');
+          
+          // Build redirect URL
+          let redirectUrl = `/auth?room=${room.id}`;
+          
+          // Add price parameter if discounted
+          if (discountedPrices[room.id]) {
+            redirectUrl += `&price=${finalPrice}`;
             
-            // Get payment ID from Razorpay response
-            const paymentId = response?.razorpay_payment_id;
-            
-            if (paymentId) {
-              console.log('Payment successful with ID:', paymentId);
+            // If we have a discounted price, we must have used a valid promo code
+            // Get the promo code data that was validated for this specific room
+            const roomPromoCode = validPromoCodes[room.id];
+            if (roomPromoCode) {
+              redirectUrl += `&promo=${roomPromoCode.code}`;
               
               // Update promo code usage count - pass paymentId to prevent double increments
               const updateResult = await updatePromoCodeUsage(roomPromoCode.id, roomPromoCode.total_uses, paymentId);
@@ -778,21 +823,18 @@ function App() {
               redirectUrl += `&promo_code_id=${roomPromoCode.id}`;
             }
           }
+          
+          // Include payment ID and verification status in URL
+          redirectUrl += `&payment_id=${paymentId}&payment_verified=true`;
+          
+          // Redirect to auth page
+          console.log('Redirecting to:', redirectUrl);
+          window.location.href = redirectUrl;
+          
+        } catch (error) {
+          console.error('Payment verification error:', error);
+          showToast(`Payment verification error: ${error.message}`, 'error');
         }
-        
-        // Include payment ID from Razorpay response
-        if (response && response.razorpay_payment_id) {
-          redirectUrl += `&payment_id=${response.razorpay_payment_id}`;
-        }
-        
-        // Redirect to auth page
-        console.log('Redirecting to:', redirectUrl);
-        window.location.href = redirectUrl;
-      },
-      prefill: {
-        name: '',
-        email: '',
-        contact: ''
       },
       theme: {
         color: '#4F46E5'
@@ -802,6 +844,9 @@ function App() {
     const razorpay = new window.Razorpay(options);
     razorpay.open();
   };
+  
+  // Get Supabase anon key for Edge Function authentication
+  const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9za251ZXRtanR1eG1oYWd1cGtzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgxNTU2NzAsImV4cCI6MjA2MzczMTY3MH0.F1i8jK0jc-9K75wGAILWtecLHdUldwUEYkwW3SgUs5k';
   
   const handleLogin = (username: string, roomUrl: string) => {
     // Instead of redirecting directly to RunPod URL, redirect to session page

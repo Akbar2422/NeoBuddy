@@ -7,6 +7,8 @@ import '../auth.css';
 // 1. Go to Supabase dashboard > SQL Editor
 // 2. Run the following SQL query to add promo_code_used column to user_sessions table:
 // ALTER TABLE user_sessions ADD COLUMN promo_code_used TEXT;
+// 3. Run the following SQL query to add payment_verified column to user_sessions table:
+// ALTER TABLE user_sessions ADD COLUMN payment_verified BOOLEAN DEFAULT false;
 
 interface AuthProps {
   onLogin: (username: string, roomUrl: string) => void;
@@ -19,19 +21,39 @@ const Auth: React.FC<AuthProps> = ({ onLogin, roomId, roomUrl, paymentCompleted 
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPaymentVerified, setIsPaymentVerified] = useState(false);
 
-  // Get promo code from URL if any
+  // Get URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   const promoCode = urlParams.get('promo');
+  const paymentId = urlParams.get('payment_id');
+  const paymentVerifiedParam = urlParams.get('payment_verified');
 
   // Generate a unique device ID for multi-device detection
   const deviceId = localStorage.getItem('neobuddy_device_id') || btoa(Math.random().toString()).substring(0, 15);
   localStorage.setItem('neobuddy_device_id', deviceId);
 
+  // Check payment verification status on component mount
+  useEffect(() => {
+    // Check if payment is verified from URL parameter
+    if (paymentVerifiedParam === 'true' && paymentId) {
+      setIsPaymentVerified(true);
+    } else if (paymentId && !paymentVerifiedParam) {
+      // If payment_id exists but no verification parameter, show warning
+      setError('Payment verification status is missing. Please complete payment properly.');
+      console.warn('Payment ID exists but verification status is missing');
+    } else if (!paymentId) {
+      // If no payment_id, payment is not completed
+      setError('No payment detected. Please complete payment first.');
+      console.warn('No payment ID found in URL parameters');
+    }
+  }, [paymentId, paymentVerifiedParam]);
+
   // Check for existing session on component mount
   useEffect(() => {
     const checkExistingSession = async () => {
-      if (!paymentCompleted) return;
+      // Only proceed if payment is verified
+      if (!paymentCompleted || !isPaymentVerified) return;
 
       try {
         const existingSession = localStorage.getItem('neobuddy_session');
@@ -47,7 +69,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, roomId, roomUrl, paymentCompleted 
     };
 
     checkExistingSession();
-  }, [paymentCompleted, roomId]);
+  }, [paymentCompleted, roomId, isPaymentVerified]);
 
   // Start rewards countdown (if session exists)
   useEffect(() => {
@@ -104,6 +126,13 @@ const Auth: React.FC<AuthProps> = ({ onLogin, roomId, roomUrl, paymentCompleted 
       setError('Username is required');
       return;
     }
+    
+    // Verify payment status before proceeding
+    if (!isPaymentVerified) {
+      setError('Payment verification failed. Please complete payment properly.');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
 
@@ -142,19 +171,35 @@ const Auth: React.FC<AuthProps> = ({ onLogin, roomId, roomUrl, paymentCompleted 
           }
         }
 
+        // Update payment verification status if needed
+        if (!existingSession.payment_verified && paymentId) {
+          await supabase
+            .from('user_sessions')
+            .update({ 
+              payment_verified: true,
+              last_updated: new Date().toISOString() 
+            })
+            .eq('id', existingSession.id);
+          
+          // Update the local session object
+          existingSession.payment_verified = true;
+        }
+
         // Session exists → redirect
         localStorage.setItem('neobuddy_session', JSON.stringify(existingSession));
         window.location.href = `/session?room=${roomId}`;
         return;
       }
 
-      // No existing session → create new one with promo_code_used if available
+      // No existing session → create new one with payment verification and promo code if available
       const sessionData = {
         username: username.trim(),
         room_id: roomId,
         rewards_left: 60,
         device_id: deviceId,
         last_updated: new Date().toISOString(),
+        payment_verified: true, // Set payment verification status
+        payment_id: paymentId, // Store payment ID for reference
         // Add promo_code_used if a promo code is available
         ...(promoCode ? { promo_code_used: promoCode } : {})
       };

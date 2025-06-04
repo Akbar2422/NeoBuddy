@@ -66,12 +66,12 @@ const SessionHeader: React.FC<SessionHeaderProps> = ({ sessionData, adContent: i
   };
 
   useEffect(() => {
-    // Set up the refresh interval (10 seconds)
+    // Set up the refresh interval (35 seconds)
     const refreshInterval = setInterval(() => {
       fetchUpdatedSessionData();
       // Update the refresh key to trigger re-render of motion components
       setRefreshKey(prevKey => prevKey + 1);
-    }, 10000);
+    }, 35000);
 
     // Clean up the interval when the component unmounts
     return () => clearInterval(refreshInterval);
