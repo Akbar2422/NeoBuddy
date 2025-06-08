@@ -724,126 +724,188 @@ function App() {
     fetchLatestStatusMessage();
   }, []);
 
-  const handlePayment = (room: Room) => {
+  const handlePayment = async (room: Room) => {
     // Calculate the final price (original or discounted)
     const finalPrice = discountedPrices[room.id] || room.price_inr;
     
-    const options = {
-      key: process.env.RAZORPAY_KEY_ID || 'rzp_live_vq30QPPdcOI48N',
-      amount: finalPrice * 100, // Amount in paise
-      currency: 'INR',
-      name: 'NeoBuddy',
-      description: `Join ${room.name}`,
-      image: 'https://placehold.co/150x150?text=NeoBuddy',
-      // Fallback image handling is implemented through the URL service
-      // If placehold.co fails, it will automatically use a data URI fallback
-      prefill: {
-        name: '',
-        email: '',
-        contact: ''
-      },
-      handler: async function (response: any) {
-        // Get payment ID from Razorpay response
-        const paymentId = response?.razorpay_payment_id;
-        
-        if (!paymentId) {
-          showToast('Payment failed: No payment ID received', 'error');
-          return;
+    // Show loading toast
+    showToast('Initializing payment...', 'info');
+    
+    try {
+      // Step 1: Create an order on the server using Edge Function
+      const orderResponse = await fetch(
+        'https://osknuetmjtuxmhagupks.supabase.co/functions/v1/create-razorpay-order',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+          },
+          body: JSON.stringify({
+            amount: finalPrice * 100, // Convert to paise
+            currency: 'INR',
+            receipt: `room-${room.id}`,
+            notes: {
+              room_id: room.id.toString(),
+              room_name: room.name
+            },
+          }),
         }
-        
-        // Show loading toast
-        showToast('Verifying payment...', 'info');
-        
-        try {
-          // Call Supabase Edge Function to verify payment status
-          const verificationResponse = await fetch(
-            'https://osknuetmjtuxmhagupks.supabase.co/functions/v1/verify-razorpay-payment',
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                // Add Supabase anon key for authentication if needed
-                'Authorization': `Bearer ${supabaseAnonKey}`,
-              },
-              body: JSON.stringify({ payment_id: paymentId }),
-            }
-          );
+      );
+
+      if (!orderResponse.ok) {
+        const errorData = await orderResponse.json();
+        throw new Error(errorData.error || 'Failed to create order');
+      }
+
+      const orderData = await orderResponse.json();
+
+      if (!orderData.success || !orderData.order_id) {
+        throw new Error('Failed to create order: ' + (orderData.error || 'Unknown error'));
+      }
+      
+      // Step 2: Initialize Razorpay checkout with the order_id
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_vq30QPPdcOI48N',
+        amount: orderData.amount, // Amount in paise
+        currency: orderData.currency,
+        order_id: orderData.order_id, // Use the order_id from the server
+        name: 'NeoBuddy',
+        description: `Join ${room.name}`,
+        image: 'https://placehold.co/150x150?text=NeoBuddy',
+        prefill: {
+          name: '',
+          email: '',
+          contact: ''
+        },
+        handler: async function (response: any) {
+          // Get payment ID from Razorpay response
+          const paymentId = response?.razorpay_payment_id;
           
-          if (!verificationResponse.ok) {
-            const errorData = await verificationResponse.json();
-            throw new Error(errorData.error || 'Failed to verify payment');
-          }
-          
-          const verificationResult = await verificationResponse.json();
-          
-          // Check if payment is verified (captured)
-          if (!verificationResult.verified) {
-            showToast(`Payment verification failed: ${verificationResult.reason}`, 'error');
-            console.error('Payment verification failed:', verificationResult);
+          if (!paymentId) {
+            showToast('Payment failed: No payment ID received', 'error');
             return;
           }
           
-          // Payment is verified, proceed with redirection
-          console.log('Payment verified successfully:', verificationResult);
-          showToast('Payment verified successfully!', 'success');
+          // Show loading toast
+          showToast('Verifying payment...', 'info');
           
-          // Build redirect URL
-          let redirectUrl = `/auth?room=${room.id}`;
-          
-          // Add price parameter if discounted
-          if (discountedPrices[room.id]) {
-            redirectUrl += `&price=${finalPrice}`;
-            
-            // If we have a discounted price, we must have used a valid promo code
-            // Get the promo code data that was validated for this specific room
-            const roomPromoCode = validPromoCodes[room.id];
-            if (roomPromoCode) {
-              redirectUrl += `&promo=${roomPromoCode.code}`;
-              
-              // Update promo code usage count - pass paymentId to prevent double increments
-              const updateResult = await updatePromoCodeUsage(roomPromoCode.id, roomPromoCode.total_uses, paymentId);
-              
-              if (updateResult.success) {
-                // Create referral record
-                const referralResult = await createReferralRecord(roomPromoCode.id, room.id, paymentId);
-                
-                if (referralResult.success) {
-                  showToast('Referral tracked successfully!', 'success');
-                  console.log('Referral record created successfully');
-                } else {
-                  showToast('Failed to track referral', 'error');
-                  console.error('Failed to create referral record:', referralResult.error);
-                }
-              } else if (updateResult.message !== 'Already updated') {
-                // Only show error if it's not because it was already updated
-                showToast('Failed to update promo code usage', 'error');
-                console.error('Failed to update promo code usage:', updateResult.error);
+          try {
+            // Call Supabase Edge Function to verify payment status
+            const verificationResponse = await fetch(
+              'https://osknuetmjtuxmhagupks.supabase.co/functions/v1/verify-razorpay-payment',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({ payment_id: paymentId }),
               }
-              
-              // Add promo code ID to URL for Auth component (as fallback)
-              redirectUrl += `&promo_code_id=${roomPromoCode.id}`;
+            );
+            
+            if (!verificationResponse.ok) {
+              const errorData = await verificationResponse.json();
+              throw new Error(errorData.error || 'Failed to verify payment');
             }
+            
+            const verificationResult = await verificationResponse.json();
+            
+            // Check if payment is verified (captured)
+            if (!verificationResult.verified) {
+              showToast(`Payment verification failed: ${verificationResult.reason}`, 'error');
+              console.error('Payment verification failed:', verificationResult);
+              return;
+            }
+            
+            // Payment is verified, proceed with redirection
+            console.log('Payment verified successfully:', verificationResult);
+            showToast('Payment verified successfully!', 'success');
+            
+            // Build redirect URL
+            let redirectUrl = `/auth?room=${room.id}`;
+            
+            // Add price parameter if discounted
+            if (discountedPrices[room.id]) {
+              redirectUrl += `&price=${finalPrice}`;
+              
+              // If we have a discounted price, we must have used a valid promo code
+              // Get the promo code data that was validated for this specific room
+              const roomPromoCode = validPromoCodes[room.id];
+              if (roomPromoCode) {
+                redirectUrl += `&promo=${roomPromoCode.code}`;
+                
+                // Update promo code usage count - pass paymentId to prevent double increments
+                const updateResult = await updatePromoCodeUsage(roomPromoCode.id, roomPromoCode.total_uses, paymentId);
+                
+                if (updateResult.success) {
+                  // Create referral record
+                  const referralResult = await createReferralRecord(roomPromoCode.id, room.id, paymentId);
+                  
+                  if (referralResult.success) {
+                    showToast('Referral tracked successfully!', 'success');
+                    console.log('Referral record created successfully');
+                  } else {
+                    showToast('Failed to track referral', 'error');
+                    console.error('Failed to create referral record:', referralResult.error);
+                  }
+                } else if (updateResult.message !== 'Already updated') {
+                  // Only show error if it's not because it was already updated
+                  showToast('Failed to update promo code usage', 'error');
+                  console.error('Failed to update promo code usage:', updateResult.error);
+                }
+                
+                // Add promo code ID to URL for Auth component (as fallback)
+                redirectUrl += `&promo_code_id=${roomPromoCode.id}`;
+              }
+            }
+            
+            // Include payment ID and verification status in URL
+            redirectUrl += `&payment_id=${paymentId}&payment_verified=true`;
+            
+            // Redirect to auth page
+            console.log('Redirecting to:', redirectUrl);
+            window.location.href = redirectUrl;
+            
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            showToast(`Payment verification error: ${error.message}`, 'error');
           }
-          
-          // Include payment ID and verification status in URL
-          redirectUrl += `&payment_id=${paymentId}&payment_verified=true`;
-          
-          // Redirect to auth page
-          console.log('Redirecting to:', redirectUrl);
-          window.location.href = redirectUrl;
-          
-        } catch (error) {
-          console.error('Payment verification error:', error);
-          showToast(`Payment verification error: ${error.message}`, 'error');
+        },
+        theme: {
+          color: '#4F46E5'
+        },
+        modal: {
+          ondismiss: function() {
+            showToast('Payment cancelled', 'info');
+          }
         }
-      },
-      theme: {
-        color: '#4F46E5'
-      }
-    };
-  
-    const razorpay = new window.Razorpay(options);
-    razorpay.open();
+      };
+    
+      const razorpay = new window.Razorpay(options);
+      razorpay.on('payment.failed', function(response: any) {
+        let errorMessage = 'Payment failed';
+        
+        // Enhanced error handling
+        if (response.error) {
+          if (response.error.code === 'BAD_REQUEST_ERROR') {
+            errorMessage = `Payment failed: Invalid request. Please try again.`;
+          } else if (response.error.code === 'GATEWAY_ERROR') {
+            errorMessage = `Payment gateway error. Please try another payment method.`;
+          } else {
+            errorMessage = `Payment failed: ${response.error.description || 'Unknown error'}`;
+          }
+        }
+        
+        showToast(errorMessage, 'error');
+        console.error('Payment failed:', response.error);
+      });
+      
+      razorpay.open();
+    } catch (error) {
+      console.error('Payment initialization error:', error);
+      showToast(`Payment initialization error: ${error.message}`, 'error');
+    }
   };
   
   // Get Supabase anon key for Edge Function authentication
