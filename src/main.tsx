@@ -8,6 +8,7 @@ import PrivacyPolicy from './components/PrivacyPolicy.tsx'
 import TermsAndConditions from './components/TermsAndConditions.tsx'
 import CancellationRefundPolicy from './components/CancellationRefundPolicy.tsx'
 import ContactUs from './components/ContactUs.tsx'
+import RazorpayDemo from './pages/RazorpayDemo.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -20,6 +21,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="/cancellation-refund" element={<CancellationRefundPolicy />} />
         <Route path="/contact-us" element={<ContactUs />} />
+        <Route path="/razorpay-demo" element={<RazorpayDemo />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

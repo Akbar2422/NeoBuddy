@@ -7,10 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "create-order": "node scripts/create-razorpay-order.js",
+    "deploy:functions": "supabase functions deploy create-razorpay-order && supabase functions deploy verify-razorpay-signature"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.8",
+    "dotenv": "^16.3.1",
     "framer-motion": "^12.12.2",
     "razorpay": "^2.9.6",
     "react": "^19.1.0",
@@ -22,7 +25,7 @@
     "@eslint/js": "^9.25.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
-    "@vitejs/plugin-react": "^4.4.1",
+    "@vitejs/plugin-react": "^4.5.1",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.25.0",
     "eslint-plugin-react-hooks": "^5.2.0",

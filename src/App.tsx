@@ -10,6 +10,7 @@ import './promo-code.css';
 import './status-message.css';
 import Auth from './components/Auth';
 import StatusMessage from './components/StatusMessage';
+import RazorpayDemoLink from './components/RazorpayDemoLink';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -1180,6 +1181,8 @@ function App() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="flex flex-col md:flex-row justify-center items-center gap-3 md:gap-1 mt-6"
           >
+            {/* Razorpay Demo Link - Removed as requested */}
+            {/* <RazorpayDemoLink /> */}
             <a href="/" className="text-gray-400 hover:text-white px-4 py-3 rounded-lg hover:bg-gray-800/50 transition-all duration-300 text-sm md:text-base border border-transparent hover:border-gray-700/50 w-full md:w-auto text-center">
               Home
             </a>

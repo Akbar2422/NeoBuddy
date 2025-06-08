@@ -1,13 +1,12 @@
-// Supabase Edge Function for handling Razorpay webhooks
-// This function listens for Razorpay webhook events and updates user sessions accordingly
+// supabase/functions/razorpay-webhooks/index.ts
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
-import * as crypto from 'https://deno.land/std@0.168.0/crypto/mod.ts'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts"
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, razorpay-signature',
+  'Access-Control-Allow-Origin': 'https://neobuddy.netlify.app',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-razorpay-signature',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
@@ -18,215 +17,152 @@ serve(async (req) => {
   }
 
   try {
-    // Get environment variables
-    const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || ''
-    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || ''
-    const RAZORPAY_WEBHOOK_SECRET = Deno.env.get('RAZORPAY_WEBHOOK_SECRET') || ''
-
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !RAZORPAY_WEBHOOK_SECRET) {
-      throw new Error('Missing environment variables')
-    }
-
     // Initialize Supabase client
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Get webhook secret
+    const webhookSecret = Deno.env.get('RAZORPAY_WEBHOOK_SECRET')
+    if (!webhookSecret) {
+      console.error('RAZORPAY_WEBHOOK_SECRET not found')
+      return new Response('Webhook secret not configured', { status: 500, headers: corsHeaders })
+    }
 
     // Get request body and signature
     const body = await req.text()
-    const signature = req.headers.get('razorpay-signature')
+    const signature = req.headers.get('x-razorpay-signature')
 
     if (!signature) {
-      throw new Error('Missing Razorpay signature')
+      console.error('No signature provided')
+      return new Response('No signature provided', { status: 400, headers: corsHeaders })
     }
 
     // Verify webhook signature
-    const isValid = await verifyWebhookSignature(body, signature, RAZORPAY_WEBHOOK_SECRET)
-    if (!isValid) {
-      throw new Error('Invalid webhook signature')
+    const expectedSignature = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(webhookSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    ).then(key => 
+      crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body))
+    ).then(signature => 
+      Array.from(new Uint8Array(signature))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')
+    )
+
+    if (signature !== expectedSignature) {
+      console.error('Invalid signature')
+      return new Response('Invalid signature', { status: 401, headers: corsHeaders })
     }
 
     // Parse webhook payload
     const payload = JSON.parse(body)
     const event = payload.event
-    const paymentId = payload.payload?.payment?.entity?.id
+    const paymentEntity = payload.payload.payment.entity
 
-    if (!paymentId) {
-      throw new Error('Missing payment ID in webhook payload')
-    }
+    console.log(`Processing webhook event: ${event}`)
+    console.log(`Payment ID: ${paymentEntity.id}`)
 
-    console.log(`Processing Razorpay webhook: ${event} for payment ${paymentId}`)
+    // Log the webhook event
+    await supabase
+      .from('payment_logs')
+      .insert({
+        payment_id: paymentEntity.id,
+        event: event,
+        payload: payload
+      })
 
     // Handle different webhook events
     switch (event) {
       case 'payment.captured':
-        await handlePaymentCaptured(supabase, paymentId, payload)
+        await handlePaymentCaptured(supabase, paymentEntity)
         break
+      
       case 'payment.failed':
-        await handlePaymentFailed(supabase, paymentId, payload)
+        await handlePaymentFailed(supabase, paymentEntity)
         break
-      case 'payment.refunded':
-        await handlePaymentRefunded(supabase, paymentId, payload)
+      
+      case 'refund.created':
+        await handleRefundCreated(supabase, payload.payload.refund.entity)
         break
+      
       default:
-        console.log(`Unhandled webhook event: ${event}`)
+        console.log(`Unhandled event: ${event}`)
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
+    return new Response('OK', { 
+      status: 200, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
+
   } catch (error) {
-    console.error('Webhook processing error:', error.message)
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
-    })
+    console.error('Webhook processing error:', error)
+    return new Response(
+      JSON.stringify({ error: error.message }), 
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    )
   }
 })
 
-// Verify Razorpay webhook signature
-async function verifyWebhookSignature(
-  body: string,
-  signature: string,
-  secret: string
-): Promise<boolean> {
-  try {
-    // Convert secret to Uint8Array
-    const keyData = new TextEncoder().encode(secret)
-    const key = await crypto.subtle.importKey(
-      'raw',
-      keyData,
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    )
-
-    // Create HMAC signature
-    const bodyData = new TextEncoder().encode(body)
-    const signatureData = await crypto.subtle.sign('HMAC', key, bodyData)
-    const signatureHex = Array.from(new Uint8Array(signatureData))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
-
-    // Compare signatures
-    return signature === signatureHex
-  } catch (error) {
-    console.error('Signature verification error:', error)
-    return false
-  }
-}
-
-// Handle payment.captured webhook event
-async function handlePaymentCaptured(supabase: any, paymentId: string, payload: any) {
-  try {
-    // Find user session with this payment ID
-    const { data: sessions, error } = await supabase
-      .from('user_sessions')
-      .select('*')
-      .eq('payment_id', paymentId)
-
-    if (error) throw error
-
-    if (sessions && sessions.length > 0) {
-      // Update all sessions with this payment ID to mark as verified
-      const { error: updateError } = await supabase
-        .from('user_sessions')
-        .update({ payment_verified: true })
-        .eq('payment_id', paymentId)
-
-      if (updateError) throw updateError
-      console.log(`Updated ${sessions.length} sessions for payment ${paymentId} as verified`)
-    } else {
-      console.log(`No sessions found for payment ${paymentId}`)
-    }
-
-    // Log the webhook event for auditing
-    await supabase.from('payment_logs').insert({
-      payment_id: paymentId,
-      event: 'payment.captured',
-      payload: payload,
-      processed_at: new Date().toISOString(),
+async function handlePaymentCaptured(supabase: any, payment: any) {
+  console.log(`Payment captured: ${payment.id}`)
+  
+  const { error } = await supabase
+    .from('user_sessions')
+    .update({ 
+      payment_verified: true,
+      payment_failed: false,
+      updated_at: new Date().toISOString()
     })
-  } catch (error) {
-    console.error('Error handling payment.captured:', error)
+    .eq('payment_id', payment.id)
+
+  if (error) {
+    console.error('Error updating payment status:', error)
     throw error
   }
 }
 
-// Handle payment.failed webhook event
-async function handlePaymentFailed(supabase: any, paymentId: string, payload: any) {
-  try {
-    // Find user session with this payment ID
-    const { data: sessions, error } = await supabase
-      .from('user_sessions')
-      .select('*')
-      .eq('payment_id', paymentId)
-
-    if (error) throw error
-
-    if (sessions && sessions.length > 0) {
-      // Update all sessions with this payment ID to mark as failed
-      const { error: updateError } = await supabase
-        .from('user_sessions')
-        .update({ 
-          payment_verified: false,
-          payment_failed: true,
-          payment_failed_reason: payload.payload?.payment?.entity?.error_description || 'Payment failed'
-        })
-        .eq('payment_id', paymentId)
-
-      if (updateError) throw updateError
-      console.log(`Updated ${sessions.length} sessions for payment ${paymentId} as failed`)
-    }
-
-    // Log the webhook event for auditing
-    await supabase.from('payment_logs').insert({
-      payment_id: paymentId,
-      event: 'payment.failed',
-      payload: payload,
-      processed_at: new Date().toISOString(),
+async function handlePaymentFailed(supabase: any, payment: any) {
+  console.log(`Payment failed: ${payment.id}`)
+  
+  const { error } = await supabase
+    .from('user_sessions')
+    .update({ 
+      payment_verified: false,
+      payment_failed: true,
+      payment_failed_reason: payment.error_description || 'Payment failed',
+      updated_at: new Date().toISOString()
     })
-  } catch (error) {
-    console.error('Error handling payment.failed:', error)
+    .eq('payment_id', payment.id)
+
+  if (error) {
+    console.error('Error updating payment failure:', error)
     throw error
   }
 }
 
-// Handle payment.refunded webhook event
-async function handlePaymentRefunded(supabase: any, paymentId: string, payload: any) {
-  try {
-    // Find user session with this payment ID
-    const { data: sessions, error } = await supabase
-      .from('user_sessions')
-      .select('*')
-      .eq('payment_id', paymentId)
-
-    if (error) throw error
-
-    if (sessions && sessions.length > 0) {
-      // Update all sessions with this payment ID to mark as refunded
-      const { error: updateError } = await supabase
-        .from('user_sessions')
-        .update({ 
-          payment_refunded: true,
-          refund_amount: payload.payload?.refund?.entity?.amount / 100, // Convert from paise to rupees
-          refund_id: payload.payload?.refund?.entity?.id,
-          refunded_at: new Date().toISOString()
-        })
-        .eq('payment_id', paymentId)
-
-      if (updateError) throw updateError
-      console.log(`Updated ${sessions.length} sessions for payment ${paymentId} as refunded`)
-    }
-
-    // Log the webhook event for auditing
-    await supabase.from('payment_logs').insert({
-      payment_id: paymentId,
-      event: 'payment.refunded',
-      payload: payload,
-      processed_at: new Date().toISOString(),
+async function handleRefundCreated(supabase: any, refund: any) {
+  console.log(`Refund created: ${refund.id} for payment: ${refund.payment_id}`)
+  
+  const { error } = await supabase
+    .from('user_sessions')
+    .update({ 
+      payment_refunded: true,
+      refund_amount: refund.amount / 100, // Convert from paise to rupees
+      refund_id: refund.id,
+      refunded_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     })
-  } catch (error) {
-    console.error('Error handling payment.refunded:', error)
+    .eq('payment_id', refund.payment_id)
+
+  if (error) {
+    console.error('Error updating refund status:', error)
     throw error
   }
 }
