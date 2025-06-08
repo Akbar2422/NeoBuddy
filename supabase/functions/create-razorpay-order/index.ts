@@ -65,7 +65,13 @@ interface RazorpayOrderResponse {
         );
       }
   
-      const { amount, currency = 'INR', receipt = 'receipt#1', notes = {} } = await req.json();
+      const { amount, currency = 'INR', receipt, notes = {} } = await req.json();
+      
+      // Generate a unique receipt ID that's less than 40 characters
+      // Format: rcpt_<timestamp>_<random3chars>
+      const timestamp = Date.now().toString().slice(-10); // Last 10 digits of timestamp
+      const randomChars = Math.random().toString(36).substring(2, 5); // 3 random alphanumeric chars
+      const uniqueReceipt = `rcpt_${timestamp}_${randomChars}`;
   
       if (!amount) {
         return new Response(
@@ -85,7 +91,7 @@ interface RazorpayOrderResponse {
         body: JSON.stringify({
           amount,
           currency,
-          receipt,
+          receipt: uniqueReceipt, // Use our generated unique receipt ID
           payment_capture: 1,
           notes,
         }),

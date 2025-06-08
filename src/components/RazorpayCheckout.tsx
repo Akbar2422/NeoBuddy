@@ -53,7 +53,6 @@ const RazorpayCheckout: React.FC<RazorpayCheckoutProps> = ({
           body: JSON.stringify({
             amount: amount * 100, // Convert to paise
             currency: 'INR',
-            receipt: 'receipt#1',
             notes: notes,
           }),
         }

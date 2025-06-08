@@ -744,7 +744,6 @@ function App() {
           body: JSON.stringify({
             amount: finalPrice * 100, // Convert to paise
             currency: 'INR',
-            receipt: `room-${room.id}`,
             notes: {
               room_id: room.id.toString(),
               room_name: room.name
