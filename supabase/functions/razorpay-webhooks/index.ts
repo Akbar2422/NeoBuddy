@@ -2,7 +2,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts"
+import { createHmac } from "https://deno.land/std@0.140.0/node/crypto.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': 'https://neobuddy.netlify.app',
@@ -29,8 +29,8 @@ serve(async (req) => {
       return new Response('Webhook secret not configured', { status: 500, headers: corsHeaders })
     }
 
-    // Get request body and signature
-    const body = await req.text()
+    // Get raw request body and signature
+    const rawBody = await req.text()
     const signature = req.headers.get('x-razorpay-signature')
 
     if (!signature) {
@@ -38,28 +38,20 @@ serve(async (req) => {
       return new Response('No signature provided', { status: 400, headers: corsHeaders })
     }
 
-    // Verify webhook signature
-    const expectedSignature = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(webhookSecret),
-      { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['sign']
-    ).then(key => 
-      crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body))
-    ).then(signature => 
-      Array.from(new Uint8Array(signature))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')
-    )
+    // Verify webhook signature using createHmac
+    const expectedSignature = createHmac('sha256', webhookSecret)
+      .update(rawBody)
+      .digest('hex')
 
     if (signature !== expectedSignature) {
       console.error('Invalid signature')
+      console.error('Received signature:', signature)
+      console.error('Expected signature:', expectedSignature)
       return new Response('Invalid signature', { status: 401, headers: corsHeaders })
     }
 
-    // Parse webhook payload
-    const payload = JSON.parse(body)
+    // Parse webhook payload after signature verification
+    const payload = JSON.parse(rawBody)
     const event = payload.event
     const paymentEntity = payload.payload.payment.entity
 
