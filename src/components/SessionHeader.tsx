@@ -11,18 +11,19 @@ interface SessionHeaderProps {
     room_id: string;
     last_updated: string;
   } | null;
-  adContent?: {
-    id: string;
-    content: string;
-    url?: string;
-  } | null;
 }
 
-const SessionHeader: React.FC<SessionHeaderProps> = ({ sessionData, adContent: initialAdContent }) => {
+const SessionHeader: React.FC<SessionHeaderProps> = ({ sessionData }) => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState<number>(sessionData?.rewards_left || 0);
-  const [adContent, setAdContent] = useState(initialAdContent);
   const [refreshKey, setRefreshKey] = useState<number>(0);
+  const [iframeAdIndex, setIframeAdIndex] = useState(0);
+  
+  const adIframes = [
+    "https://www.highperformanceformat.com/3effeb7d346a1243769cfd1702ab655a/index.html",
+    "https://www.highperformanceformat.com/e015a7e68a89c81d3e9f222bac041adb/index.html",
+    "https://www.highperformanceformat.com/ba23abaee8f06688f8660a8609465b1d/index.html"
+  ];
 
   // Function to fetch updated session data
   const fetchUpdatedSessionData = async () => {
@@ -35,33 +36,8 @@ const SessionHeader: React.FC<SessionHeaderProps> = ({ sessionData, adContent: i
         const parsedSession = JSON.parse(storedSession);
         setCurrentTime(parsedSession.rewards_left);
       }
-      
-      // Fetch new ad content (simulated here, replace with actual API call)
-      fetchNewAdContent();
     } catch (error) {
       console.error('Error refreshing session header:', error);
-    }
-  };
-
-  // Function to fetch new ad content
-  const fetchNewAdContent = async () => {
-    // This is a placeholder for the actual ad fetching logic
-    // In a real implementation, you would call your ad service API
-    try {
-      // Simulating an API call with a timeout
-      // Replace this with your actual ad fetching logic
-      const mockAds = [
-        { id: '1', content: 'Try our new AI features!', url: '#' },
-        { id: '2', content: 'Upgrade for more session time', url: '#' },
-        { id: '3', content: 'Share your creations with friends', url: '#' },
-        { id: '4', content: 'Limited time offer: 50% off premium', url: '#' },
-      ];
-      
-      // Randomly select an ad
-      const randomAd = mockAds[Math.floor(Math.random() * mockAds.length)];
-      setAdContent(randomAd);
-    } catch (error) {
-      console.error('Error fetching ad content:', error);
     }
   };
 
@@ -76,6 +52,16 @@ const SessionHeader: React.FC<SessionHeaderProps> = ({ sessionData, adContent: i
     // Clean up the interval when the component unmounts
     return () => clearInterval(refreshInterval);
   }, [sessionData?.id]);
+
+  useEffect(() => {
+    // Set up the ad rotation interval (30 seconds)
+    const adRotationInterval = setInterval(() => {
+      setIframeAdIndex(prevIndex => (prevIndex + 1) % adIframes.length);
+    }, 30000);
+
+    // Clean up the interval when the component unmounts
+    return () => clearInterval(adRotationInterval);
+  }, []);
 
   return (
     <header className="session-header p-4 flex justify-between items-center">
@@ -92,19 +78,23 @@ const SessionHeader: React.FC<SessionHeaderProps> = ({ sessionData, adContent: i
         </motion.h1>
         
         {/* Ad Content Area */}
-        {adContent && (
-          <motion.div
-            className="ml-4 px-3 py-1 bg-opacity-30 bg-purple-900 rounded-full text-sm"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-            key={`ad-${refreshKey}-${adContent.id}`}
-          >
-            <a href={adContent.url || '#'} className="text-purple-200 hover:text-white transition-colors">
-              {adContent.content}
-            </a>
-          </motion.div>
-        )}
+        <motion.div
+          className="ml-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          key={`iframe-ad-${iframeAdIndex}`}
+        >
+          <iframe
+            src={adIframes[iframeAdIndex]}
+            width="728"
+            height="90"
+            frameBorder="0"
+            scrolling="no"
+            sandbox="allow-scripts allow-same-origin"
+            title={`Ad ${iframeAdIndex}`}
+          ></iframe>
+        </motion.div>
       </div>
       
       <div className="flex items-center space-x-4">
