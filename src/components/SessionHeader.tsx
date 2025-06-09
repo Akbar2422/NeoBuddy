@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import '../session.css';
@@ -17,12 +17,13 @@ const SessionHeader: React.FC<SessionHeaderProps> = ({ sessionData }) => {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState<number>(sessionData?.rewards_left || 0);
   const [refreshKey, setRefreshKey] = useState<number>(0);
-  const [iframeAdIndex, setIframeAdIndex] = useState(0);
+  const [adKeyIndex, setAdKeyIndex] = useState(0);
+  const adContainerRef = useRef<HTMLDivElement>(null);
   
-  const adIframes = [
-    "https://www.highperformanceformat.com/3effeb7d346a1243769cfd1702ab655a/index.html",
-    "https://www.highperformanceformat.com/e015a7e68a89c81d3e9f222bac041adb/index.html",
-    "https://www.highperformanceformat.com/ba23abaee8f06688f8660a8609465b1d/index.html"
+  const adKeys = [
+    "3effeb7d346a1243769cfd1702ab655a",
+    "e015a7e68a89c81d3e9f222bac041adb",
+    "ba23abaee8f06688f8660a8609465b1d"
   ];
 
   // Function to fetch updated session data
@@ -41,6 +42,34 @@ const SessionHeader: React.FC<SessionHeaderProps> = ({ sessionData }) => {
     }
   };
 
+  // Function to load Adsterra ad
+  const loadAdsterraAd = (adKey: string) => {
+    if (!adContainerRef.current) return;
+    
+    // Clear previous ad content
+    adContainerRef.current.innerHTML = '';
+    
+    // Create atOptions script
+    const optionsScript = document.createElement('script');
+    optionsScript.text = `var atOptions = {
+      'key' : '${adKey}',
+      'format' : 'iframe',
+      'height' : 90,
+      'width' : 728,
+      'params' : {}
+    };
+    `;
+    
+    // Create invoke script
+    const invokeScript = document.createElement('script');
+    invokeScript.src = `//www.highperformanceformat.com/${adKey}/invoke.js`;
+    invokeScript.async = true;
+    
+    // Append scripts to container
+    adContainerRef.current.appendChild(optionsScript);
+    adContainerRef.current.appendChild(invokeScript);
+  };
+
   useEffect(() => {
     // Set up the refresh interval (35 seconds)
     const refreshInterval = setInterval(() => {
@@ -54,9 +83,14 @@ const SessionHeader: React.FC<SessionHeaderProps> = ({ sessionData }) => {
   }, [sessionData?.id]);
 
   useEffect(() => {
+    // Load initial ad
+    loadAdsterraAd(adKeys[adKeyIndex]);
+    
     // Set up the ad rotation interval (30 seconds)
     const adRotationInterval = setInterval(() => {
-      setIframeAdIndex(prevIndex => (prevIndex + 1) % adIframes.length);
+      const nextIndex = (adKeyIndex + 1) % adKeys.length;
+      setAdKeyIndex(nextIndex);
+      loadAdsterraAd(adKeys[nextIndex]);
     }, 30000);
 
     // Clean up the interval when the component unmounts
@@ -83,17 +117,10 @@ const SessionHeader: React.FC<SessionHeaderProps> = ({ sessionData }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
-          key={`iframe-ad-${iframeAdIndex}`}
+          key={`adsterra-ad-${adKeyIndex}`}
+          style={{ width: '728px', height: '90px' }}
         >
-          <iframe
-            src={adIframes[iframeAdIndex]}
-            width="728"
-            height="90"
-            frameBorder="0"
-            scrolling="no"
-            sandbox="allow-scripts allow-same-origin"
-            title={`Ad ${iframeAdIndex}`}
-          ></iframe>
+          <div ref={adContainerRef} style={{ width: '728px', height: '90px' }} />
         </motion.div>
       </div>
       
